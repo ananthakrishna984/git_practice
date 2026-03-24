@@ -1,0 +1,62 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+)
+
+type CallRequest struct {
+	Name    string `json:"madhu"`
+	Phone   string `json:"123456"`
+	Message string `json:"we are calling for hdfc bank .ant requirment is about loan sir/madam?"`
+}
+
+type CallResponse struct {
+	Status  string `json:"processing"`
+	Reply   string `json:"not required"`
+	CallID  string `json:"a0123"`
+}
+
+func main() {
+	// Serve static files
+	fs := http.FileServer(http.Dir("./static"))
+	http.Handle("/", fs)
+
+	// API endpoint
+	http.HandleFunc("/api/call", handleCall)
+
+	port := "8080"
+	fmt.Println("Server running on http://localhost:" + port)
+	log.Fatal(http.ListenAndServe(":"+port, nil))
+}
+
+func handleCall(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req CallRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Sample AI telecaller response logic
+	reply := fmt.Sprintf(
+		"Hello %s, this is an AI telecaller. We would like to talk to you about: %s. Our team will reach you at %s.",
+		req.Name, req.Message, req.Phone,
+	)
+
+	resp := CallResponse{
+		Status: "success",
+		Reply:  reply,
+		CallID: "CALL-1001",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}

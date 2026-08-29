@@ -1,0 +1,790 @@
+import java.util.*;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
+
+public class BankingApplication {
+
+    public static void main(String[] args) {
+        Bank bank = new Bank("Secure National Bank");
+        BankApplication app = new BankApplication(bank);
+        app.seedData();
+        app.start();
+    }
+}
+
+class BankApplication {
+
+    private final Bank bank;
+    private final Scanner scanner;
+    private Customer loggedInCustomer;
+
+    public BankApplication(Bank bank) {
+        this.bank = bank;
+        this.scanner = new Scanner(System.in);
+    }
+
+    public void seedData() {
+        Customer customer1 = new Customer(1, "Anand", "anand@mail.com", "1234");
+        Customer customer2 = new Customer(2, "Priya", "priya@mail.com", "5678");
+
+        SavingsAccount account1 = new SavingsAccount("SB1001", customer1, 5000);
+        CurrentAccount account2 = new CurrentAccount("CA2001", customer2, 15000);
+
+        customer1.addAccount(account1);
+        customer2.addAccount(account2);
+
+        bank.registerCustomer(customer1);
+        bank.registerCustomer(customer2);
+    }
+
+    public void start() {
+        boolean running = true;
+
+        while (running) {
+            printMainMenu();
+            int choice = readInt();
+
+            switch (choice) {
+                case 1:
+                    registerCustomer();
+                    break;
+                case 2:
+                    login();
+                    break;
+                case 3:
+                    bank.printAllCustomers();
+                    break;
+                case 4:
+                    System.out.println("Thank you for using banking application.");
+                    running = false;
+                    break;
+                default:
+                    System.out.println("Invalid choice.");
+            }
+        }
+    }
+
+    private void printMainMenu() {
+        System.out.println("\n====== BANKING APPLICATION ======");
+        System.out.println("1. Register Customer");
+        System.out.println("2. Login");
+        System.out.println("3. View All Customers");
+        System.out.println("4. Exit");
+        System.out.print("Enter choice: ");
+    }
+
+    private void registerCustomer() {
+        System.out.print("Enter customer id: ");
+        int id = readInt();
+
+        System.out.print("Enter customer name: ");
+        String name = scanner.nextLine();
+
+        System.out.print("Enter email: ");
+        String email = scanner.nextLine();
+
+        System.out.print("Enter password: ");
+        String password = scanner.nextLine();
+
+        Customer customer = new Customer(id, name, email, password);
+        bank.registerCustomer(customer);
+
+        System.out.println("Customer registered successfully.");
+
+        createAccountForCustomer(customer);
+    }
+
+    private void createAccountForCustomer(Customer customer) {
+        System.out.println("Choose account type:");
+        System.out.println("1. Savings Account");
+        System.out.println("2. Current Account");
+
+        int choice = readInt();
+
+        System.out.print("Enter account number: ");
+        String accountNumber = scanner.nextLine();
+
+        System.out.print("Enter initial deposit: ");
+        double balance = readDouble();
+
+        Account account;
+
+        if (choice == 1) {
+            account = new SavingsAccount(accountNumber, customer, balance);
+        } else {
+            account = new CurrentAccount(accountNumber, customer, balance);
+        }
+
+        customer.addAccount(account);
+        System.out.println("Account created successfully.");
+    }
+
+    private void login() {
+        System.out.print("Enter email: ");
+        String email = scanner.nextLine();
+
+        System.out.print("Enter password: ");
+        String password = scanner.nextLine();
+
+        Customer customer = bank.authenticate(email, password);
+
+        if (customer == null) {
+            System.out.println("Invalid login credentials.");
+            return;
+        }
+
+        loggedInCustomer = customer;
+        System.out.println("Welcome " + customer.getName());
+        customerMenu();
+    }
+
+    private void customerMenu() {
+        boolean active = true;
+
+        while (active) {
+            System.out.println("\n------ CUSTOMER MENU ------");
+            System.out.println("1. View Accounts");
+            System.out.println("2. Deposit Money");
+            System.out.println("3. Withdraw Money");
+            System.out.println("4. Transfer Money");
+            System.out.println("5. Transaction History");
+            System.out.println("6. Apply Interest");
+            System.out.println("7. Logout");
+            System.out.print("Enter choice: ");
+
+            int choice = readInt();
+
+            switch (choice) {
+                case 1:
+                    viewAccounts();
+                    break;
+                case 2:
+                    depositMoney();
+                    break;
+                case 3:
+                    withdrawMoney();
+                    break;
+                case 4:
+                    transferMoney();
+                    break;
+                case 5:
+                    showTransactionHistory();
+                    break;
+                case 6:
+                    applyInterest();
+                    break;
+                case 7:
+                    active = false;
+                    loggedInCustomer = null;
+                    System.out.println("Logged out successfully.");
+                    break;
+                default:
+                    System.out.println("Invalid option.");
+            }
+        }
+    }
+
+    private void viewAccounts() {
+        List<Account> accounts = loggedInCustomer.getAccounts();
+
+        if (accounts.isEmpty()) {
+            System.out.println("No accounts available.");
+            return;
+        }
+
+        for (Account account : accounts) {
+            System.out.println(account);
+        }
+    }
+
+    private Account chooseAccount() {
+        List<Account> accounts = loggedInCustomer.getAccounts();
+
+        if (accounts.isEmpty()) {
+            System.out.println("No accounts available.");
+            return null;
+        }
+
+        for (int i = 0; i < accounts.size(); i++) {
+            System.out.println((i + 1) + ". " + accounts.get(i).getAccountNumber());
+        }
+
+        System.out.print("Select account: ");
+        int choice = readInt();
+
+        if (choice < 1 || choice > accounts.size()) {
+            System.out.println("Invalid account selection.");
+            return null;
+        }
+
+        return accounts.get(choice - 1);
+    }
+
+    private void depositMoney() {
+        Account account = chooseAccount();
+
+        if (account == null) {
+            return;
+        }
+
+        System.out.print("Enter amount to deposit: ");
+        double amount = readDouble();
+
+        account.deposit(amount);
+        System.out.println("Deposit successful.");
+    }
+
+    private void withdrawMoney() {
+        Account account = chooseAccount();
+
+        if (account == null) {
+            return;
+        }
+
+        System.out.print("Enter amount to withdraw: ");
+        double amount = readDouble();
+
+        boolean status = account.withdraw(amount);
+
+        if (status) {
+            System.out.println("Withdrawal successful.");
+        } else {
+            System.out.println("Insufficient balance.");
+        }
+    }
+
+    private void transferMoney() {
+        Account source = chooseAccount();
+
+        if (source == null) {
+            return;
+        }
+
+        System.out.print("Enter destination account number: ");
+        String destinationNumber = scanner.nextLine();
+
+        Account destination = bank.findAccount(destinationNumber);
+
+        if (destination == null) {
+            System.out.println("Destination account not found.");
+            return;
+        }
+
+        System.out.print("Enter transfer amount: ");
+        double amount = readDouble();
+
+        boolean transferred = source.transfer(destination, amount);
+
+        if (transferred) {
+            System.out.println("Transfer successful.");
+        } else {
+            System.out.println("Transfer failed.");
+        }
+    }
+
+    private void showTransactionHistory() {
+        Account account = chooseAccount();
+
+        if (account == null) {
+            return;
+        }
+
+        List<Transaction> transactions = account.getTransactions();
+
+        if (transactions.isEmpty()) {
+            System.out.println("No transactions found.");
+            return;
+        }
+
+        for (Transaction transaction : transactions) {
+            System.out.println(transaction);
+        }
+    }
+
+    private void applyInterest() {
+        Account account = chooseAccount();
+
+        if (account == null) {
+            return;
+        }
+
+        if (account instanceof SavingsAccount) {
+            ((SavingsAccount) account).applyInterest();
+            System.out.println("Interest applied successfully.");
+        } else {
+            System.out.println("Interest is applicable only for savings account.");
+        }
+    }
+
+    private int readInt() {
+        while (true) {
+            try {
+                int value = Integer.parseInt(scanner.nextLine());
+                return value;
+            } catch (Exception e) {
+                System.out.print("Enter valid number: ");
+            }
+        }
+    }
+
+    private double readDouble() {
+        while (true) {
+            try {
+                double value = Double.parseDouble(scanner.nextLine());
+                return value;
+            } catch (Exception e) {
+                System.out.print("Enter valid amount: ");
+            }
+        }
+    }
+}
+
+class Bank {
+
+    private final String bankName;
+    private final List<Customer> customers;
+
+    public Bank(String bankName) {
+        this.bankName = bankName;
+        this.customers = new ArrayList<>();
+    }
+
+    public void registerCustomer(Customer customer) {
+        customers.add(customer);
+    }
+
+    public Customer authenticate(String email, String password) {
+        for (Customer customer : customers) {
+            if (customer.getEmail().equals(email) && customer.getPassword().equals(password)) {
+                return customer;
+            }
+        }
+        return null;
+    }
+
+    public Account findAccount(String accountNumber) {
+        for (Customer customer : customers) {
+            for (Account account : customer.getAccounts()) {
+                if (account.getAccountNumber().equals(accountNumber)) {
+                    return account;
+                }
+            }
+        }
+        return null;
+    }
+
+    public void printAllCustomers() {
+        System.out.println("\nBank Name: " + bankName);
+
+        if (customers.isEmpty()) {
+            System.out.println("No customers found.");
+            return;
+        }
+
+        for (Customer customer : customers) {
+            System.out.println(customer);
+        }
+    }
+
+    public List<Customer> getCustomers() {
+        return customers;
+    }
+}
+
+class Customer {
+
+    private int id;
+    private String name;
+    private String email;
+    private String password;
+    private List<Account> accounts;
+
+    public Customer(int id, String name, String email, String password) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.password = password;
+        this.accounts = new ArrayList<>();
+    }
+
+    public void addAccount(Account account) {
+        accounts.add(account);
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public List<Account> getAccounts() {
+        return accounts;
+    }
+
+    public void setAccounts(List<Account> accounts) {
+        this.accounts = accounts;
+    }
+
+    @Override
+    public String toString() {
+        return "Customer{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", email='" + email + '\'' +
+                ", accounts=" + accounts.size() +
+                '}';
+    }
+}
+
+abstract class Account {
+
+    protected String accountNumber;
+    protected Customer customer;
+    protected double balance;
+    protected List<Transaction> transactions;
+
+    public Account(String accountNumber, Customer customer, double balance) {
+        this.accountNumber = accountNumber;
+        this.customer = customer;
+        this.balance = balance;
+        this.transactions = new ArrayList<>();
+
+        Transaction transaction = new Transaction(
+                UUID.randomUUID().toString(),
+                "INITIAL_DEPOSIT",
+                balance,
+                "Account created"
+        );
+
+        transactions.add(transaction);
+    }
+
+    public void deposit(double amount) {
+        if (amount <= 0) {
+            System.out.println("Amount should be greater than zero.");
+            return;
+        }
+
+        balance += amount;
+
+        Transaction transaction = new Transaction(
+                UUID.randomUUID().toString(),
+                "DEPOSIT",
+                amount,
+                "Amount deposited"
+        );
+
+        transactions.add(transaction);
+    }
+
+    public boolean withdraw(double amount) {
+        if (amount <= 0) {
+            return false;
+        }
+
+        if (balance >= amount) {
+            balance -= amount;
+
+            Transaction transaction = new Transaction(
+                    UUID.randomUUID().toString(),
+                    "WITHDRAW",
+                    amount,
+                    "Amount withdrawn"
+            );
+
+            transactions.add(transaction);
+            return true;
+        }
+
+        return false;
+    }
+
+    public boolean transfer(Account target, double amount) {
+        if (target == null) {
+            return false;
+        }
+
+        if (withdraw(amount)) {
+            target.deposit(amount);
+
+            Transaction transaction = new Transaction(
+                    UUID.randomUUID().toString(),
+                    "TRANSFER",
+                    amount,
+                    "Transferred to " + target.getAccountNumber()
+            );
+
+            transactions.add(transaction);
+            return true;
+        }
+
+        return false;
+    }
+
+    public String getAccountNumber() {
+        return accountNumber;
+    }
+
+    public void setAccountNumber(String accountNumber) {
+        this.accountNumber = accountNumber;
+    }
+
+    public Customer getCustomer() {
+        return customer;
+    }
+
+    public void setCustomer(Customer customer) {
+        this.customer = customer;
+    }
+
+    public double getBalance() {
+        return balance;
+    }
+
+    public void setBalance(double balance) {
+        this.balance = balance;
+    }
+
+    public List<Transaction> getTransactions() {
+        return transactions;
+    }
+
+    public void setTransactions(List<Transaction> transactions) {
+        this.transactions = transactions;
+    }
+
+    public abstract String getAccountType();
+
+    @Override
+    public String toString() {
+        return "Account{" +
+                "accountNumber='" + accountNumber + '\'' +
+                ", type='" + getAccountType() + '\'' +
+                ", balance=" + balance +
+                '}';
+    }
+}
+
+class SavingsAccount extends Account {
+
+    private double interestRate;
+
+    public SavingsAccount(String accountNumber, Customer customer, double balance) {
+        super(accountNumber, customer, balance);
+        this.interestRate = 4.5;
+    }
+
+    public void applyInterest() {
+        double interest = balance * interestRate / 100;
+        balance += interest;
+
+        Transaction transaction = new Transaction(
+                UUID.randomUUID().toString(),
+                "INTEREST",
+                interest,
+                "Interest added to savings account"
+        );
+
+        transactions.add(transaction);
+    }
+
+    public double getInterestRate() {
+        return interestRate;
+    }
+
+    public void setInterestRate(double interestRate) {
+        this.interestRate = interestRate;
+    }
+
+    @Override
+    public String getAccountType() {
+        return "Savings";
+    }
+}
+
+class CurrentAccount extends Account {
+
+    private double overdraftLimit;
+
+    public CurrentAccount(String accountNumber, Customer customer, double balance) {
+        super(accountNumber, customer, balance);
+        this.overdraftLimit = 10000;
+    }
+
+    @Override
+    public boolean withdraw(double amount) {
+        if (amount <= 0) {
+            return false;
+        }
+
+        if (balance + overdraftLimit >= amount) {
+            balance -= amount;
+
+            Transaction transaction = new Transaction(
+                    UUID.randomUUID().toString(),
+                    "WITHDRAW",
+                    amount,
+                    "Withdraw from current account"
+            );
+
+            transactions.add(transaction);
+            return true;
+        }
+
+        return false;
+    }
+
+    public double getOverdraftLimit() {
+        return overdraftLimit;
+    }
+
+    public void setOverdraftLimit(double overdraftLimit) {
+        this.overdraftLimit = overdraftLimit;
+    }
+
+    @Override
+    public String getAccountType() {
+        return "Current";
+    }
+}
+
+class Transaction {
+
+    private String transactionId;
+    private String transactionType;
+    private double amount;
+    private String remarks;
+    private LocalDateTime transactionDate;
+
+    public Transaction(String transactionId, String transactionType, double amount, String remarks) {
+        this.transactionId = transactionId;
+        this.transactionType = transactionType;
+        this.amount = amount;
+        this.remarks = remarks;
+        this.transactionDate = LocalDateTime.now();
+    }
+
+    public String getTransactionId() {
+        return transactionId;
+    }
+
+    public void setTransactionId(String transactionId) {
+        this.transactionId = transactionId;
+    }
+
+    public String getTransactionType() {
+        return transactionType;
+    }
+
+    public void setTransactionType(String transactionType) {
+        this.transactionType = transactionType;
+    }
+
+    public double getAmount() {
+        return amount;
+    }
+
+    public void setAmount(double amount) {
+        this.amount = amount;
+    }
+
+    public String getRemarks() {
+        return remarks;
+    }
+
+    public void setRemarks(String remarks) {
+        this.remarks = remarks;
+    }
+
+    public LocalDateTime getTransactionDate() {
+        return transactionDate;
+    }
+
+    public void setTransactionDate(LocalDateTime transactionDate) {
+        this.transactionDate = transactionDate;
+    }
+
+    @Override
+    public String toString() {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+
+        return "Transaction{" +
+                "transactionId='" + transactionId + '\'' +
+                ", transactionType='" + transactionType + '\'' +
+                ", amount=" + amount +
+                ", remarks='" + remarks + '\'' +
+                ", date='" + transactionDate.format(formatter) + '\'' +
+                '}';
+    }
+}
+
+class Loan {
+
+    private String loanId;
+    private double principal;
+    private double interestRate;
+    private int years;
+
+    public Loan(String loanId, double principal, double interestRate, int years) {
+        this.loanId = loanId;
+        this.principal = principal;
+        this.interestRate = interestRate;
+        this.years = years;
+    }
+
+    public double calculateEMI() {
+        double monthlyRate = interestRate / 12 / 100;
+        int months = years * 12;
+
+        return (principal * monthlyRate * Math.pow(1 + monthlyRate, months)) /
+                (Math.pow(1 + monthlyRate, months) - 1);
+    }
+
+    public String getLoanId() {
+        return loanId;
+    }
+
+    public void setLoanId(String loanId) {
+        this.loanId = loanId;
+    }
+
+    public double getPrincipal() {
+        return principal;
+    }
+
+    public void setPrincipal(double principal) {
+        this.principal = principal;
+    }
+
+    public double getInterestRate() {
+        return interestRate;
+    }
+
+    public void setInterestRate(double interestRate) {
+        this
